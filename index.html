@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Điểm Danh</title>
+    <script>
+        // Lấy tọa độ GPS của người dùng
+        function getLocation() {
+            // Kiểm tra xem trình duyệt có hỗ trợ Geolocation hay không
+            if (navigator.geolocation) {
+                // Gọi phương thức getCurrentPosition để lấy vị trí
+                navigator.geolocation.getCurrentPosition(sendLocation, showError);
+            } else {
+                alert("Trình duyệt không hỗ trợ Geolocation.");
+            }
+        }
+
+        // Hàm xử lý khi lấy được vị trí
+        function sendLocation(position) {
+            const userLat = position.coords.latitude; // Lấy vĩ độ của người dùng
+            const userLong = position.coords.longitude; // Lấy kinh độ của người dùng
+            
+            // Hiển thị vị trí người dùng lên trang web
+            document.getElementById('location').innerHTML = 
+                `Vị trí của bạn: Vĩ độ: ${userLat}, Kinh độ: ${userLong}`;
+            
+            // Gửi thông tin vị trí đến API backend
+            sendToBackend(userLat, userLong);
+        }
+
+        // Hàm xử lý lỗi nếu không thể lấy được vị trí
+        function showError(error) {
+            let errorMessage = "";
+            switch (error.code) {
+                case error.PERMISSION_DENIED:
+                    errorMessage = "Người dùng từ chối yêu cầu truy cập vị trí.";
+                    break;
+                case error.POSITION_UNAVAILABLE:
+                    errorMessage = "Không thể xác định vị trí.";
+                    break;
+                case error.TIMEOUT:
+                    errorMessage = "Quá trình lấy vị trí mất quá nhiều thời gian.";
+                    break;
+                default:
+                    errorMessage = "Đã xảy ra lỗi không xác định.";
+                    break;
+            }
+            alert(errorMessage);
+        }
+
+        // Hàm gửi dữ liệu đến API backend
+        function sendToBackend(lat, long) {
+            // Tạo dữ liệu để gửi
+            const data = {
+                user_lat: lat,
+                user_long: long,
+                timestamp: new Date().toISOString()
+            };
+
+            // Gửi dữ liệu qua API POST
+            fetch('http://your-server-url/checkin', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(data)
+            })
+            .then(response => response.json())
+            .then(data => alert('Dữ liệu đã được gửi thành công!'))
+            .catch(error => console.error('Lỗi:', error));
+        }
+
+        // Gọi hàm getLocation khi trang web được tải
+        window.onload = getLocation;
+    </script>
+</head>
+<body>
+    <h1>Chào mừng bạn đến với hệ thống điểm danh!</h1>
+    <p id="location">Đang lấy vị trí...</p>
+</body>
+</html>
