@@ -5,78 +5,71 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Điểm Danh</title>
     <script>
-        // Lấy tọa độ GPS của người dùng
-        function getLocation() {
-            // Kiểm tra xem trình duyệt có hỗ trợ Geolocation hay không
-            if (navigator.geolocation) {
-                // Gọi phương thức getCurrentPosition để lấy vị trí
-                navigator.geolocation.getCurrentPosition(sendLocation, showError);
-            } else {
-                alert("Trình duyệt không hỗ trợ Geolocation.");
-            }
+        // Hàm tính khoảng cách giữa hai điểm (toạ độ)
+        function calculateDistance(lat1, lon1, lat2, lon2) {
+            const R = 6371; // Radius of the Earth in km
+            const dLat = (lat2 - lat1) * Math.PI / 180;
+            const dLon = (lon2 - lon1) * Math.PI / 180;
+            const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+                      Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+                      Math.sin(dLon / 2) * Math.sin(dLon / 2);
+            const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+            const distance = R * c; // Distance in km
+            return distance * 1000; // Convert to meters
         }
 
-        // Hàm xử lý khi lấy được vị trí
-        function sendLocation(position) {
-            const userLat = position.coords.latitude; // Lấy vĩ độ của người dùng
-            const userLong = position.coords.longitude; // Lấy kinh độ của người dùng
-            
-            // Hiển thị vị trí người dùng lên trang web
-            document.getElementById('location').innerHTML = 
-                `Vị trí của bạn: Vĩ độ: ${userLat}, Kinh độ: ${userLong}`;
-            
-            // Gửi thông tin vị trí đến API backend
-            sendToBackend(userLat, userLong);
+        // Hàm gửi dữ liệu đến Google Apps Script
+        function sendLocationToGoogleSheets() {
+            // Lấy tọa độ người dùng
+            navigator.geolocation.getCurrentPosition(function(position) {
+                const userLat = position.coords.latitude;
+                const userLong = position.coords.longitude;
+
+                // Tọa độ QR (thay thế bằng tọa độ trong mã QR)
+                const qrLat = 10.762622;
+                const qrLong = 106.660172;
+                const distance = calculateDistance(userLat, userLong, qrLat, qrLong); // Tính khoảng cách
+
+                // Dữ liệu cần gửi
+                const data = {
+                    id: "Zalo123", // ID người dùng
+                    name: "Nguyễn Văn A", // Tên người dùng
+                    time: new Date().toISOString(), // Thời gian điểm danh
+                    user_lat: userLat, 
+                    user_long: userLong,
+                    qr_lat: qrLat,
+                    qr_long: qrLong,
+                    distance: distance
+                };
+
+                // Gửi yêu cầu POST tới Google Apps Script
+                fetch('https://script.google.com/macros/s/AKfycbzmgEB3a2Y6_DPLytpBbLHg2_4BO_fY_O8S3wlqY5sX7bO0zcEgGASfLuglRic5qHYc/exec', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(data)
+                })
+                .then(response => response.json())
+                .then(data => {
+                    console.log('Response from Google Sheets:', data.message);
+                    alert('Điểm danh thành công!');
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    alert('Đã có lỗi xảy ra, vui lòng thử lại!');
+                });
+            });
         }
 
-        // Hàm xử lý lỗi nếu không thể lấy được vị trí
-        function showError(error) {
-            let errorMessage = "";
-            switch (error.code) {
-                case error.PERMISSION_DENIED:
-                    errorMessage = "Người dùng từ chối yêu cầu truy cập vị trí.";
-                    break;
-                case error.POSITION_UNAVAILABLE:
-                    errorMessage = "Không thể xác định vị trí.";
-                    break;
-                case error.TIMEOUT:
-                    errorMessage = "Quá trình lấy vị trí mất quá nhiều thời gian.";
-                    break;
-                default:
-                    errorMessage = "Đã xảy ra lỗi không xác định.";
-                    break;
-            }
-            alert(errorMessage);
-        }
-
-        // Hàm gửi dữ liệu đến API backend
-        function sendToBackend(lat, long) {
-            // Tạo dữ liệu để gửi
-            const data = {
-                user_lat: lat,
-                user_long: long,
-                timestamp: new Date().toISOString()
-            };
-
-            // Gửi dữ liệu qua API POST
-            fetch('http://your-server-url/checkin', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify(data)
-            })
-            .then(response => response.json())
-            .then(data => alert('Dữ liệu đã được gửi thành công!'))
-            .catch(error => console.error('Lỗi:', error));
-        }
-
-        // Gọi hàm getLocation khi trang web được tải
-        window.onload = getLocation;
+        // Gọi hàm khi trang được tải
+        window.onload = function() {
+            sendLocationToGoogleSheets();
+        };
     </script>
 </head>
 <body>
-    <h1>Chào mừng bạn đến với hệ thống điểm danh!</h1>
-    <p id="location">Đang lấy vị trí...</p>
+    <h1>Chào mừng bạn đến buổi điểm danh!</h1>
+    <p>Đang quét mã QR và lưu dữ liệu...</p>
 </body>
 </html>
